@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from .backtest import BacktestResult, run_backtest
-from .data import Universe, load_prices
+from .data import Universe, clean_bad_ticks, load_prices
 from .risk import drawdown, ex_ante_vol, historical_var
 
 log = logging.getLogger(__name__)
@@ -72,6 +72,7 @@ class DeskAgent:
     # ---- workflow -----------------------------------------------------------------------------
     def run(self) -> DeskRun:
         prices = self._load_data()
+        prices = self._clean_data(prices)
         self._data_quality(prices)
         bt = run_backtest(prices, self.universe.asset_class, self.cfg, self.cfg.get("benchmark"))
         self._log("Backtest", "PASS",
@@ -99,6 +100,17 @@ class DeskAgent:
             detail += f"; dropped: {', '.join(sorted(dropped))}"
         self._log("Load market data", status, detail)
         return prices
+
+    def _clean_data(self, prices: pd.DataFrame) -> pd.DataFrame:
+        a = self.cfg["agent"]
+        classes = a.get("clean_asset_classes", ["fx"])
+        cols = [n for n in prices.columns if self.universe.asset_class.get(n) in classes]
+        cleaned, fixes = clean_bad_ticks(prices, cols, threshold=a.get("spike_sigma", 6.0))
+        fixed = {k: v for k, v in fixes.items() if v}
+        self._log("Bad-tick filter", "PASS",
+                  "no reversing spikes found" if not fixed else
+                  "repaired " + ", ".join(f"{k} ({v} prints)" for k, v in fixed.items()))
+        return cleaned
 
     def _data_quality(self, prices: pd.DataFrame) -> None:
         a = self.cfg["agent"]

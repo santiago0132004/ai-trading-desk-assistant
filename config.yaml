@@ -1,4 +1,13 @@
 # AI Trading Desk Assistant configuration
+
+author:                   # shown at the top of the report
+  name: "Santiago Villegas"
+  title: "Financial Engineer · Fixed Income & FX Trading Desk"
+  location: "Medellín, Colombia"
+  linkedin: "https://www.linkedin.com/in/santiago-villegas-a1a6ba345/"
+  github: "https://github.com/santiago0132004/ai-trading-desk-assistant"
+  email: ""               # optional, e.g. you@email.com
+
 start_date: "2015-01-01"
 
 universe:
@@ -43,4 +52,6 @@ agent:
   aum_usd: 1000000               # notional used for the trade blotter
   stale_data_days: 5             # flag data older than this (business days)
   jump_sigma: 6                  # flag daily moves larger than N sigma
+  spike_sigma: 6                 # bad-tick filter: one-day spikes that fully reverse
+  clean_asset_classes: [fx]      # free FX feeds have bad prints; equity data is cleaner
   llm_commentary: true           # uses ANTHROPIC_API_KEY if set, otherwise rule-based text

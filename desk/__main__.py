@@ -14,7 +14,7 @@ import yaml
 
 from .agent import DeskAgent
 from .backtest import run_backtest
-from .data import Universe, load_prices
+from .data import Universe, clean_bad_ticks, load_prices
 from .report import write_report
 
 
@@ -34,6 +34,8 @@ def main() -> None:
     if a.command == "backtest":
         uni = Universe.from_config(cfg)
         prices = load_prices(uni, cfg["start_date"], demo=a.demo)
+        fx_cols = [n for n in prices if uni.asset_class[n] in cfg["agent"].get("clean_asset_classes", ["fx"])]
+        prices, _ = clean_bad_ticks(prices, fx_cols, threshold=cfg["agent"].get("spike_sigma", 6.0))
         res = run_backtest(prices, uni.asset_class, cfg, cfg.get("benchmark"))
         print(f"\nBacktest {res.equity.index[0].date()} -> {res.equity.index[-1].date()}")
         for k, v in res.metrics.items():
@@ -42,7 +44,7 @@ def main() -> None:
         return
 
     run = DeskAgent(cfg, demo=a.demo).run()
-    path = write_report(run, a.out, aum=cfg["agent"]["aum_usd"])
+    path = write_report(run, a.out, aum=cfg["agent"]["aum_usd"], author=cfg.get("author"), limits=cfg["risk"])
     print(f"\nReport written to {path}")
     print("\n" + run.commentary)
 

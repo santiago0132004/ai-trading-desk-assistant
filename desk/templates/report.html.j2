@@ -3,72 +3,171 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Trading Desk – {{ run.as_of.date() }}</title>
+<title>AI Trading Desk Assistant{% if author.name %} · {{ author.name }}{% endif %}</title>
+<meta name="description" content="Automated daily FX + equities trading desk report{% if author.name %} built by {{ author.name }}{% endif %}.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --navy:#0b2545; --teal:#1b998b; --red:#d1495b; --amber:#e9a23b; --bg:#f6f7f9; --card:#fff; --text:#1d2433; --muted:#5c677d; --line:#e3e6ec; }
+  :root { --navy:#0b2545; --navy2:#13315c; --teal:#1b998b; --red:#d1495b; --gold:#c9a227; --amber:#e9a23b;
+          --bg:#f4f6f9; --card:#fff; --text:#1d2433; --muted:#5c677d; --line:#e4e8ef; }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
-  header { background:var(--navy); color:#fff; padding:28px 16px 22px; }
-  .wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
-  header .wrap { padding:0; }
-  h1 { margin:0; font-size:24px; letter-spacing:.3px; }
-  .sub { color:#c9d3e3; margin-top:4px; font-size:13px; }
+  body { margin:0; font-family:Inter, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:var(--bg);
+         color:var(--text); font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; }
+  .wrap { max-width:1120px; margin:0 auto; padding:0 20px; }
+
+  /* hero */
+  .hero { background:radial-gradient(1200px 400px at 85% -10%, #1f4e8c 0%, transparent 60%), linear-gradient(135deg, #0b2545 0%, #0e2d55 55%, #13315c 100%);
+          color:#fff; padding:34px 0 30px; }
+  .hero .wrap { display:flex; gap:28px; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; }
+  .eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:11.5px; font-weight:600; letter-spacing:1.4px;
+             text-transform:uppercase; color:#9fd8cf; }
+  .live { width:8px; height:8px; border-radius:50%; background:#3ddc97; box-shadow:0 0 0 4px rgba(61,220,151,.18); }
+  h1 { margin:8px 0 6px; font-size:32px; line-height:1.15; font-weight:800; letter-spacing:-.3px; }
+  .lede { margin:0; color:#c7d2e4; max-width:560px; font-size:14.5px; }
+  .author { display:flex; gap:14px; align-items:center; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14);
+            border-radius:14px; padding:14px 16px; backdrop-filter:blur(6px); min-width:300px; }
+  .avatar { width:52px; height:52px; border-radius:50%; flex:none; display:grid; place-items:center; font-weight:800; font-size:18px;
+            color:var(--navy); background:linear-gradient(135deg, #f3d77a, var(--gold)); }
+  .author .by { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#9fb0c9; }
+  .author .name { font-size:17px; font-weight:700; line-height:1.2; }
+  .author .role { font-size:12.5px; color:#c7d2e4; }
+  .links { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .btn { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; text-decoration:none; padding:5px 10px;
+         border-radius:7px; background:#fff; color:var(--navy); }
+  .btn.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.35); }
+  .btn svg { width:13px; height:13px; }
+
+  /* status strip */
+  .strip { background:#fff; border-bottom:1px solid var(--line); }
+  .strip .wrap { display:flex; gap:10px 22px; flex-wrap:wrap; padding-top:11px; padding-bottom:11px; font-size:12.5px; color:var(--muted); }
+  .strip b { color:var(--text); font-weight:600; }
   .banner { background:var(--amber); color:#2b1d00; padding:8px 16px; text-align:center; font-weight:600; font-size:13px; }
+
+  /* layout */
   .grid { display:grid; gap:16px; margin:18px 0; }
   .g4 { grid-template-columns:repeat(4, 1fr); }
-  .g2 { grid-template-columns:1.2fr 1fr; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
-  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:0 0 10px; }
-  .kpi .v { font-size:22px; font-weight:700; color:var(--navy); }
-  .kpi .l { color:var(--muted); font-size:12px; }
-  .note p { margin:0 0 10px; }
-  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; background:#eef1f6; color:var(--muted); margin-left:6px; vertical-align:middle; }
+  .g2 { grid-template-columns:1.25fr 1fr; }
+  .g2b { grid-template-columns:1.6fr 1fr; align-items:start; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; box-shadow:0 1px 2px rgba(16,24,40,.04); }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:var(--muted); margin:0 0 12px; font-weight:700;
+             display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .section { margin-top:16px; }
+  .kpi .l { color:var(--muted); font-size:12px; font-weight:500; }
+  .kpi .v { font-size:26px; font-weight:800; color:var(--navy); letter-spacing:-.4px; margin-top:2px; }
+  .kpi .s { font-size:11.5px; color:var(--muted); }
+  .bar { height:5px; background:#eef1f6; border-radius:3px; margin-top:8px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--teal); border-radius:3px; }
+  .note p { margin:0 0 10px; font-size:14.5px; }
+  .tag { display:inline-block; font-size:10.5px; padding:2px 8px; border-radius:20px; background:#eef1f6; color:var(--muted);
+         font-weight:600; letter-spacing:.3px; text-transform:none; }
+  .tag.ai { background:#e7f0ff; color:#1d4ed8; }
   img { width:100%; height:auto; display:block; }
   .scroll { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  th, td { padding:6px 8px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  table { width:100%; border-collapse:collapse; font-size:12.8px; font-variant-numeric:tabular-nums; }
+  th, td { padding:8px 9px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
   th:first-child, td:first-child { text-align:left; }
-  th { color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; }
-  .pos { color:var(--teal); } .neg { color:var(--red); }
-  .pill { font-weight:700; font-size:11px; padding:2px 8px; border-radius:4px; }
+  td:first-child { font-weight:600; }
+  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.5px; background:#fafbfc; }
+  tr:last-child td { border-bottom:none; }
+  .pos { color:#13806f; } .neg { color:var(--red); }
+  .pill { font-weight:700; font-size:10.5px; padding:3px 9px; border-radius:5px; letter-spacing:.3px; }
   .BUY { background:#e1f4f1; color:#11695f; } .SELL { background:#fbe5e8; color:#9b2335; } .HOLD { background:#eef1f6; color:var(--muted); }
   .PASS { background:#e1f4f1; color:#11695f; } .WARN { background:#fdf0dc; color:#8a5a00; } .FAIL { background:#fbe5e8; color:#9b2335; }
-  .metrics { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px 16px; }
-  .metrics div { display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding:4px 0; }
-  .metrics span:last-child { font-weight:600; }
-  footer { color:var(--muted); font-size:12px; padding:20px 16px 40px; text-align:center; }
-  @media (max-width: 800px) { .g4 { grid-template-columns:repeat(2, 1fr); } .g2, .metrics { grid-template-columns:1fr; } }
+  .LONG { color:#13806f; font-weight:600; } .SHORT { color:var(--red); font-weight:600; } .FLAT { color:var(--muted); }
+  .heat { display:inline-block; min-width:48px; padding:2px 6px; border-radius:4px; font-weight:600; }
+  .muted { color:var(--muted); font-size:12.5px; }
+  .compare th:not(:first-child), .compare td:not(:first-child) { width:30%; }
+  .compare td:nth-child(2) { color:var(--navy); font-weight:700; }
+
+  /* how it works */
+  .steps { display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; counter-reset:step; }
+  .step { background:#fafbfc; border:1px solid var(--line); border-radius:10px; padding:12px; position:relative; }
+  .step::before { counter-increment:step; content:counter(step); position:absolute; top:10px; right:12px; font-weight:800;
+                  color:#d6dce6; font-size:20px; }
+  .step b { display:block; font-size:13px; color:var(--navy); margin-bottom:3px; }
+  .step span { font-size:12px; color:var(--muted); line-height:1.45; display:block; }
+
+  footer { background:var(--navy); color:#c7d2e4; margin-top:28px; }
+  footer .wrap { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; padding-top:22px; padding-bottom:26px; font-size:12.5px; }
+  footer b { color:#fff; }
+  footer a { color:#9fd8cf; text-decoration:none; }
+
+  @media (max-width: 900px) {
+    .g4 { grid-template-columns:repeat(2, 1fr); }
+    .g2, .g2b { grid-template-columns:1fr; }
+    .steps { grid-template-columns:repeat(2, 1fr); }
+    h1 { font-size:26px; }
+    .author { min-width:0; width:100%; }
+  }
 </style>
 </head>
 <body>
-<header><div class="wrap">
-  <h1>AI Trading Desk Assistant</h1>
-  <div class="sub">Daily desk report · FX + equities · as of close {{ run.as_of.date() }} · generated automatically</div>
-</div></header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow"><span class="live"></span>Live portfolio project · updated every trading day</div>
+      <h1>AI Trading Desk Assistant</h1>
+      <p class="lede">An autonomous agent that runs a trading desk's daily routine for a LatAm FX and equities book:
+        data controls, signals, risk-targeted sizing, limit checks and the morning note.</p>
+    </div>
+    {% if author.name %}
+    <div class="author">
+      <div class="avatar">{{ initials }}</div>
+      <div>
+        <div class="by">Designed &amp; built by</div>
+        <div class="name">{{ author.name }}</div>
+        {% if author.title %}<div class="role">{{ author.title }}</div>{% endif %}
+        <div class="links">
+          {% if author.linkedin %}<a class="btn" href="{{ author.linkedin }}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.78-2.05C20.6 8.65 21 11.2 21 14.5V21h-4v-5.8c0-1.4-.03-3.2-1.95-3.2-1.95 0-2.25 1.52-2.25 3.1V21H9z"/></svg>LinkedIn</a>{% endif %}
+          {% if author.github %}<a class="btn ghost" href="{{ author.github }}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.6 18.3 5 18.3 5c.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>Source code</a>{% endif %}
+          {% if author.email %}<a class="btn ghost" href="mailto:{{ author.email }}">Email</a>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<div class="strip"><div class="wrap">
+  <span>As of close <b>{{ run.as_of.strftime("%b %d, %Y") }}</b></span>
+  <span>Updated <b>{{ updated }}</b></span>
+  <span><b>{{ snapshot|length }}</b> instruments · FX + equities</span>
+  <span>Controls <b>{{ run.audit|length - n_warn }} PASS</b>{% if n_warn %} · <b>{{ n_warn }} WARN</b>{% endif %}</span>
+  <span>Next run <b>weekdays 5:37 pm Bogotá</b></span>
+</div></div>
 {% if run.demo %}<div class="banner">Demo run on synthetic data. Run without --demo for live market data.</div>{% endif %}
 
 <div class="wrap">
   <div class="grid g4">
-    <div class="card kpi"><div class="l">Gross exposure</div><div class="v">{{ risk["Gross exposure"]|num }}x</div></div>
-    <div class="card kpi"><div class="l">Ex-ante volatility</div><div class="v">{{ risk["Ex-ante vol"]|pct }}</div></div>
-    <div class="card kpi"><div class="l">1-day VaR 95%</div><div class="v">{{ risk["1D VaR 95%"]|pct(2) }}</div></div>
-    <div class="card kpi"><div class="l">Strategy drawdown</div><div class="v">{{ risk["Current drawdown"]|pct }}</div></div>
+    <div class="card kpi"><div class="l">Gross exposure</div><div class="v">{{ risk["Gross exposure"]|num }}x</div>
+      <div class="s">limit {{ "%.2f"|format(limits.max_gross_leverage) }}x</div><div class="bar"><i style="width:{{ [risk['Gross exposure'] / limits.max_gross_leverage * 100, 100]|min }}%"></i></div></div>
+    <div class="card kpi"><div class="l">Ex-ante volatility</div><div class="v">{{ risk["Ex-ante vol"]|pct }}</div>
+      <div class="s">target {{ limits.target_vol_annual|pct(0) }}</div><div class="bar"><i style="width:{{ [risk['Ex-ante vol'] / limits.target_vol_annual * 100, 100]|min }}%"></i></div></div>
+    <div class="card kpi"><div class="l">1-day VaR 95%</div><div class="v">{{ risk["1D VaR 95%"]|pct(2) }}</div>
+      <div class="s">≈ USD {{ "{:,.0f}".format(risk["1D VaR 95%"] * aum) }} per {{ "{:,.0f}".format(aum / 1000000) }}M</div></div>
+    <div class="card kpi"><div class="l">Strategy drawdown</div><div class="v">{{ risk["Current drawdown"]|pct }}</div>
+      <div class="s">brake at -{{ limits.drawdown_brake|pct(0) }}{% if risk["Drawdown brake active"] %} · <b style="color:var(--red)">ACTIVE</b>{% endif %}</div>
+      <div class="bar"><i style="width:{{ [(-risk['Current drawdown']) / limits.drawdown_brake * 100, 100]|min }}%; background:var(--red)"></i></div></div>
   </div>
 
   <div class="grid g2">
     <div class="card note">
-      <h2>Morning note <span class="tag">{{ "written by LLM" if run.commentary_source == "LLM" else "rule-based" }}</span></h2>
+      <h2>Morning note {% if run.commentary_source == "LLM" %}<span class="tag ai">✦ written by AI</span>{% else %}<span class="tag">rule-based</span>{% endif %}</h2>
       {% for p in paragraphs %}<p>{{ p }}</p>{% endfor %}
     </div>
-    <div class="card"><h2>Target book</h2><img src="data:image/png;base64,{{ charts.book }}" alt="Target weights"></div>
+    <div class="card"><h2>Target book · next session</h2><img src="data:image/png;base64,{{ charts.book }}" alt="Target weights"></div>
   </div>
 
   <div class="card">
-    <h2>Trade blotter <span class="tag">per USD {{ "{:,.0f}".format(aum) }} notional</span></h2>
+    <h2>Trade blotter <span class="tag">{{ n_trades }} trade{{ "" if n_trades == 1 else "s" }} · USD {{ "{:,.0f}".format(aum) }} notional · {{ limits.rebalance_band|pct(0) }} no-trade band</span></h2>
     <div class="scroll"><table>
       <tr><th>Instrument</th><th>Side</th><th>Current</th><th>Target</th><th>Change</th><th>Trade (USD)</th><th>Action</th></tr>
       {% for name, r in book.iterrows() %}
-      <tr><td>{{ name }}</td><td>{{ r["Side"] }}</td><td>{{ r["Current weight"]|pct(1, True) }}</td>
+      <tr><td>{{ name }}</td><td><span class="{{ r['Side'] }}">{{ r["Side"] }}</span></td><td>{{ r["Current weight"]|pct(1, True) }}</td>
         <td><b>{{ r["Target weight"]|pct(1, True) }}</b></td>
         <td class="{{ 'pos' if r['Change'] > 0 else 'neg' if r['Change'] < 0 else '' }}">{{ r["Change"]|pct(1, True) }}</td>
         <td>{{ "{:+,.0f}".format(r["Trade (USD)"]) }}</td><td><span class="pill {{ r['Action'] }}">{{ r["Action"] }}</span></td></tr>
@@ -76,42 +175,71 @@
     </table></div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <h2>Market snapshot &amp; signals</h2>
+  <div class="card section">
+    <h2>Market snapshot &amp; signals <span class="tag">signals in [-1, +1]</span></h2>
     <div class="scroll"><table>
       <tr><th>Instrument</th><th>Class</th><th>Last</th><th>1D</th><th>1W</th><th>1M</th><th>YTD</th><th>Vol 1M</th><th>Vol pctile</th><th>Momentum</th><th>Trend</th><th>Mean rev.</th><th>Signal</th></tr>
       {% for name, r in snapshot.iterrows() %}
-      <tr><td>{{ name }}</td><td>{{ r["Class"] }}</td><td>{{ r["Last"]|num(2) }}</td>
+      <tr><td>{{ name }}</td><td class="muted">{{ r["Class"] }}</td><td>{{ r["Last"]|num(2) }}</td>
         {% for k in ["1D","1W","1M","YTD"] %}<td class="{{ 'pos' if r[k] > 0 else 'neg' if r[k] < 0 else '' }}">{{ r[k]|pct(1, True) }}</td>{% endfor %}
         <td>{{ r["Vol 1M"]|pct }}</td><td>{{ r["Vol pctile"]|pct(0) }}</td>
-        {% for k in ["Momentum","Trend","Mean rev.","Signal"] %}<td class="{{ 'pos' if r[k] > 0 else 'neg' if r[k] < 0 else '' }}">{{ "{:+.2f}".format(r[k]) }}</td>{% endfor %}
+        {% for k in ["Momentum","Trend","Mean rev."] %}<td class="{{ 'pos' if r[k] > 0 else 'neg' if r[k] < 0 else '' }}">{{ "{:+.2f}".format(r[k]) }}</td>{% endfor %}
+        {% set s = r["Signal"] %}
+        <td><span class="heat" style="background:{{ 'rgba(27,153,139,%.2f)'|format(s * 0.55) if s > 0 else 'rgba(209,73,91,%.2f)'|format(-s * 0.55) }}; color:{{ '#fff' if s|abs > 0.45 else 'inherit' }}">{{ "{:+.2f}".format(s) }}</span></td>
       </tr>
       {% endfor %}
     </table></div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <h2>Backtest since {{ start }} <span class="tag">net of transaction costs, no look-ahead</span></h2>
-    <img src="data:image/png;base64,{{ charts.equity }}" alt="Equity curve">
-    <img src="data:image/png;base64,{{ charts.drawdown }}" alt="Drawdown">
-    <div class="metrics" style="margin-top:10px">
-      {% for k, v in metrics %}<div><span>{{ k }}</span><span>{{ v }}</span></div>{% endfor %}
+  <div class="card section">
+    <h2>Backtest since {{ start }} <span class="tag">net of costs · no look-ahead</span></h2>
+    <img src="data:image/png;base64,{{ charts.equity }}" alt="Growth of $1">
+    <img src="data:image/png;base64,{{ charts.drawdown }}" alt="Drawdown" style="margin-top:6px">
+  </div>
+
+  <div class="grid g2b" style="grid-template-columns:1fr 1.6fr">
+    <div class="card">
+      <h2>Performance</h2>
+      <table class="compare">
+        <tr><th>Metric</th><th>Strategy</th><th>SPY</th></tr>
+        {% for k, a, b in metric_rows %}<tr><td>{{ k }}</td><td>{{ a }}</td><td>{{ b }}</td></tr>{% endfor %}
+      </table>
+      <p class="muted" style="margin:12px 0 0">The strategy targets {{ limits.target_vol_annual|pct(0) }} volatility across {{ snapshot|length }} instruments, so it is built for
+        risk-adjusted return and shallow drawdowns, not to outrun the S&amp;P 500. Annual cost drag {{ cost_drag }},
+        turnover {{ turnover }}x per year.</p>
+    </div>
+    <div class="card">
+      <h2>Exposure · last 2 years</h2>
+      <img src="data:image/png;base64,{{ charts.exposure }}" alt="Exposure">
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <h2>Exposure</h2>
-    <img src="data:image/png;base64,{{ charts.exposure }}" alt="Exposure">
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <h2>Control log</h2>
+  <div class="card">
+    <h2>Control log <span class="tag">every step of today's run</span></h2>
     <div class="scroll"><table>
-      <tr><th>Step</th><th>Status</th><th style="text-align:left">Detail</th></tr>
-      {% for s in run.audit %}<tr><td>{{ s.name }}</td><td><span class="pill {{ s.status }}">{{ s.status }}</span></td><td style="text-align:left; white-space:normal">{{ s.detail }}</td></tr>{% endfor %}
+      <tr><th>Step</th><th style="text-align:center">Status</th><th style="text-align:left">Detail</th></tr>
+      {% for s in run.audit %}<tr><td>{{ s.name }}</td><td style="text-align:center"><span class="pill {{ s.status }}">{{ s.status }}</span></td><td style="text-align:left; white-space:normal">{{ s.detail }}</td></tr>{% endfor %}
     </table></div>
   </div>
+
+  <div class="card section">
+    <h2>How the agent works</h2>
+    <div class="steps">
+      <div class="step"><b>Load &amp; clean</b><span>Daily closes from Yahoo Finance; bad FX prints repaired and logged.</span></div>
+      <div class="step"><b>Data controls</b><span>Freshness, gaps and outlier checks before anything trades.</span></div>
+      <div class="step"><b>Signals</b><span>Vol-adjusted momentum, 50/200 trend and RSI mean reversion.</span></div>
+      <div class="step"><b>Sizing</b><span>Inverse-vol weights scaled to a {{ limits.target_vol_annual|pct(0) }} volatility target.</span></div>
+      <div class="step"><b>Risk limits</b><span>Gross, concentration, VaR and a drawdown brake.</span></div>
+      <div class="step"><b>Publish</b><span>Blotter, morning note and this page, via GitHub Actions.</span></div>
+    </div>
+  </div>
 </div>
-<footer>Built by Santiago Villegas · Research and education only, not investment advice.</footer>
+
+<footer><div class="wrap">
+  <div>{% if author.name %}Designed and built by <b>{{ author.name }}</b>{% if author.location %} · {{ author.location }}{% endif %}{% endif %}<br>
+    Research and education only. Not investment advice.</div>
+  <div>{% if author.linkedin %}<a href="{{ author.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{% endif %}
+    {% if author.github %} · <a href="{{ author.github }}" target="_blank" rel="noopener">Source code on GitHub</a>{% endif %}</div>
+</div></footer>
 </body>
 </html>

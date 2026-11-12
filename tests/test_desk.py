@@ -7,7 +7,7 @@ import yaml
 
 from desk.agent import DeskAgent
 from desk.backtest import performance_metrics, run_backtest
-from desk.data import Universe, synthetic_prices
+from desk.data import Universe, clean_bad_ticks, synthetic_prices
 from desk.report import write_report
 from desk.risk import size_positions
 from desk.signals import composite, mean_reversion, momentum, trend
@@ -84,5 +84,18 @@ def test_full_agent_run_writes_report(tmp_path):
     run = DeskAgent(CFG, demo=True).run()
     assert {s.status for s in run.audit} <= {"PASS", "WARN", "FAIL"}
     assert run.commentary
-    path = write_report(run, tmp_path)
+    path = write_report(run, tmp_path, author=CFG["author"], limits=CFG["risk"])
+    assert CFG["author"]["name"] in path.read_text()
     assert path.exists() and (tmp_path / "desk_run.json").exists() and (tmp_path / "morning_note.md").exists()
+
+
+def test_bad_tick_filter_repairs_spikes_but_keeps_real_moves(prices):
+    s = prices[["USDCOP"]].copy()
+    i, j = 600, 900
+    original_i = s.iloc[i, 0]
+    s.iloc[i, 0] *= 1.12                      # bad print: +12% then straight back
+    s.iloc[j:, 0] *= 0.85                     # genuine -15% repricing that does not reverse
+    cleaned, fixes = clean_bad_ticks(s)
+    assert fixes["USDCOP"] == 1
+    assert cleaned.iloc[i, 0] == pytest.approx(original_i, rel=0.02)
+    assert cleaned.iloc[j, 0] == pytest.approx(s.iloc[j, 0])   # real move kept

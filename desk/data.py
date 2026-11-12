@@ -50,6 +50,37 @@ def load_prices(universe: Universe, start: str, demo: bool = False) -> pd.DataFr
     return close[keep].sort_index().ffill(limit=3).dropna(how="all")
 
 
+def clean_bad_ticks(prices: pd.DataFrame, columns: list[str] | None = None, threshold: float = 6.0,
+                    window: int = 63, max_iter: int = 3) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Remove one-day spikes that fully reverse the next day (bad prints, common in free FX feeds).
+
+    A price at day t is treated as a bad tick when the move into t and the move out of t are both
+    larger than `threshold` robust standard deviations, go in opposite directions, and the round trip
+    nets out (|r_t + r_t+1| < 25% of |r_t|). Genuine crashes and devaluations do not reverse that
+    cleanly, so they are kept. Bad ticks are replaced by interpolation and counted for the control log.
+    """
+    cleaned = prices.copy()
+    fixes: dict[str, int] = {}
+    for col in columns if columns is not None else list(prices.columns):
+        s = cleaned[col].dropna()
+        total = 0
+        for _ in range(max_iter):
+            r = np.log(s).diff()
+            mad = (r - r.rolling(window, min_periods=20).median()).abs().rolling(window, min_periods=20).median()
+            sigma = (1.4826 * mad).fillna(1.4826 * r.abs().median())
+            nxt = r.shift(-1)
+            spike = ((r.abs() > threshold * sigma) & (nxt.abs() > threshold * sigma)
+                     & (np.sign(r) != np.sign(nxt)) & ((r + nxt).abs() < 0.25 * r.abs()))
+            n = int(spike.sum())
+            if n == 0:
+                break
+            s = s.mask(spike).interpolate(limit_area="inside")
+            total += n
+        cleaned.loc[s.index, col] = s
+        fixes[col] = total
+    return cleaned, fixes
+
+
 def synthetic_prices(universe: Universe, start: str, seed: int = 7) -> pd.DataFrame:
     """Regime-switching random walks so the whole pipeline runs offline. Not real market data."""
     rng = np.random.default_rng(seed)

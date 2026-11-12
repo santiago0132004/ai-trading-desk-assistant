@@ -1,11 +1,13 @@
 # AI Trading Desk Assistant
 
+**Designed and built by [Santiago Villegas](https://www.linkedin.com/in/santiago-villegas-a1a6ba345/)**, financial engineer on a fixed income and FX trading desk (Medellín, Colombia).
+
 **An automated, process-driven daily workflow for a multi-asset book (LatAm FX + US and Colombian equities).**
 Every weekday after the close, an agent downloads market data, runs data-quality controls, scores each
 instrument, sizes a risk-targeted book, checks it against desk limits, writes the morning note and publishes
 a report to GitHub Pages. No manual steps.
 
-**Live report:** `https://<your-github-user>.github.io/ai-trading-desk-assistant/` (refreshed every trading day)
+### 👉 [Live report](https://santiago0132004.github.io/ai-trading-desk-assistant/) · refreshed every trading day at 5:37 pm Bogotá
 
 ![Report preview](assets/report_preview.png)
 <sub>Preview generated with the built-in demo data. The live site uses real market data from Yahoo Finance.</sub>
@@ -23,7 +25,7 @@ like a real desk's workflow.
 
 ```mermaid
 flowchart LR
-    A[Load data<br/>Yahoo Finance] --> B[Data quality<br/>freshness · gaps · outliers]
+    A[Load & clean<br/>Yahoo Finance · bad-tick filter] --> B[Data quality<br/>freshness · gaps · outliers]
     B --> C[Signals<br/>momentum · trend · mean reversion]
     C --> D[Position sizing<br/>inverse-vol · vol target · caps]
     D --> E[Risk checks<br/>gross · concentration · VaR · drawdown]
@@ -34,7 +36,7 @@ flowchart LR
 
 | Step | What happens | Output |
 |---|---|---|
-| 1. Load data | Daily closes for 4 FX pairs (USD/COP, USD/MXN, USD/BRL, EUR/USD) and 4 equities (SPY, QQQ, Ecopetrol, Bancolombia) | Price panel |
+| 1. Load & clean | Daily closes for 4 FX pairs (USD/COP, USD/MXN, USD/BRL, EUR/USD) and 4 equities (SPY, QQQ, Ecopetrol, Bancolombia). A bad-tick filter repairs one-day FX spikes that fully reverse (common in free data feeds) and logs every fix | Clean price panel |
 | 2. Data quality | Flags stale data, missing values and moves beyond 6σ | PASS / WARN in the control log |
 | 3. Signals | Vol-adjusted time-series momentum (1–12m), 50/200 trend filter and RSI mean reversion, blended into a score in [-1, 1] | Signal table |
 | 4. Sizing | Inverse-volatility weights, long-only for equities, 30% cap per instrument, scaled to a 10% annual volatility target using the covariance matrix | Target book |
@@ -52,19 +54,21 @@ flowchart LR
   every day of the backtest.
 - **Fails safe.** If the LLM is unavailable, the run falls back to the rule-based note and logs a WARN.
   Instruments with no data are dropped and logged instead of crashing the run.
+- **Clean data first.** Free FX feeds contain bad prints that inflate volatility and distort sizing. The agent
+  repairs one-day spikes that fully reverse while keeping genuine repricings, and a unit test checks both cases.
 - **Auditable.** Every step writes PASS / WARN / FAIL with a reason to the control log and `desk_run.json`.
 
 ## Run it locally
 
 ```bash
-git clone https://github.com/<your-github-user>/ai-trading-desk-assistant.git
+git clone https://github.com/santiago0132004/ai-trading-desk-assistant.git
 cd ai-trading-desk-assistant
 pip install -r requirements.txt
 
 python -m desk run --demo      # full workflow on synthetic data, no internet needed
 python -m desk run             # live market data -> docs/index.html
 python -m desk backtest        # backtest metrics only
-pytest -q                      # 8 tests
+python -m pytest -q            # 9 tests
 ```
 
 Optional LLM commentary:
@@ -75,7 +79,8 @@ export ANTHROPIC_MODEL=claude-sonnet-4-5   # any available Claude model
 python -m desk run
 ```
 
-Everything (universe, lookbacks, risk limits, costs) lives in [`config.yaml`](config.yaml).
+Everything (author card, universe, lookbacks, risk limits, costs) lives in [`config.yaml`](config.yaml).
+Edit it on GitHub and the next run picks up the change automatically.
 
 ## Project structure
 
@@ -99,7 +104,7 @@ Slack or email delivery of the morning note, and a paper-trading connector.
 
 ---
 
-Built by **Santiago Villegas**, financial engineer on a fixed income and FX trading desk ·
+**Santiago Villegas** · Financial Engineer (Universidad EIA) · AMV-certified operator · Fixed income & FX trading desk ·
 [LinkedIn](https://www.linkedin.com/in/santiago-villegas-a1a6ba345/)
 
 *For research and education only. Not investment advice.*
