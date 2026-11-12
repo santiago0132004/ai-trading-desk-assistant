@@ -1,0 +1,46 @@
+# AI Trading Desk Assistant configuration
+start_date: "2015-01-01"
+
+universe:
+  fx:                     # long/short allowed. Long = long the first currency of the pair
+    USDCOP: "USDCOP=X"
+    USDMXN: "MXN=X"
+    USDBRL: "BRL=X"
+    EURUSD: "EURUSD=X"
+  equities:               # long-only by default
+    SPY: "SPY"
+    QQQ: "QQQ"
+    Ecopetrol: "EC"
+    Bancolombia: "CIB"
+
+benchmark: "SPY"
+
+strategy:
+  momentum_lookbacks: [21, 63, 126, 252]   # ~1m, 3m, 6m, 12m
+  trend_fast: 50
+  trend_slow: 200
+  rsi_window: 14
+  weights:
+    momentum: 0.5
+    trend: 0.3
+    mean_reversion: 0.2
+
+risk:
+  target_vol_annual: 0.10        # portfolio volatility target
+  vol_window: 63                 # days used to estimate vol / covariance
+  max_weight_per_asset: 0.30     # absolute weight cap per instrument
+  max_gross_leverage: 1.5        # sum of |weights|
+  drawdown_brake: 0.12           # halve exposure while drawdown is deeper than this
+  rebalance_band: 0.02           # only trade an instrument when its weight moves more than 2%
+  allow_short:
+    fx: true
+    equities: false
+  transaction_cost_bps:
+    fx: 2
+    equities: 5
+
+agent:
+  aum_usd: 1000000               # notional used for the trade blotter
+  stale_data_days: 5             # flag data older than this (business days)
+  jump_sigma: 6                  # flag daily moves larger than N sigma
+  llm_commentary: true           # uses ANTHROPIC_API_KEY if set, otherwise rule-based text

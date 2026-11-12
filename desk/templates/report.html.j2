@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Trading Desk – {{ run.as_of.date() }}</title>
+<style>
+  :root { --navy:#0b2545; --teal:#1b998b; --red:#d1495b; --amber:#e9a23b; --bg:#f6f7f9; --card:#fff; --text:#1d2433; --muted:#5c677d; --line:#e3e6ec; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  header { background:var(--navy); color:#fff; padding:28px 16px 22px; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
+  header .wrap { padding:0; }
+  h1 { margin:0; font-size:24px; letter-spacing:.3px; }
+  .sub { color:#c9d3e3; margin-top:4px; font-size:13px; }
+  .banner { background:var(--amber); color:#2b1d00; padding:8px 16px; text-align:center; font-weight:600; font-size:13px; }
+  .grid { display:grid; gap:16px; margin:18px 0; }
+  .g4 { grid-template-columns:repeat(4, 1fr); }
+  .g2 { grid-template-columns:1.2fr 1fr; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:0 0 10px; }
+  .kpi .v { font-size:22px; font-weight:700; color:var(--navy); }
+  .kpi .l { color:var(--muted); font-size:12px; }
+  .note p { margin:0 0 10px; }
+  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; background:#eef1f6; color:var(--muted); margin-left:6px; vertical-align:middle; }
+  img { width:100%; height:auto; display:block; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { padding:6px 8px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; }
+  .pos { color:var(--teal); } .neg { color:var(--red); }
+  .pill { font-weight:700; font-size:11px; padding:2px 8px; border-radius:4px; }
+  .BUY { background:#e1f4f1; color:#11695f; } .SELL { background:#fbe5e8; color:#9b2335; } .HOLD { background:#eef1f6; color:var(--muted); }
+  .PASS { background:#e1f4f1; color:#11695f; } .WARN { background:#fdf0dc; color:#8a5a00; } .FAIL { background:#fbe5e8; color:#9b2335; }
+  .metrics { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px 16px; }
+  .metrics div { display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding:4px 0; }
+  .metrics span:last-child { font-weight:600; }
+  footer { color:var(--muted); font-size:12px; padding:20px 16px 40px; text-align:center; }
+  @media (max-width: 800px) { .g4 { grid-template-columns:repeat(2, 1fr); } .g2, .metrics { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>AI Trading Desk Assistant</h1>
+  <div class="sub">Daily desk report · FX + equities · as of close {{ run.as_of.date() }} · generated automatically</div>
+</div></header>
+{% if run.demo %}<div class="banner">Demo run on synthetic data. Run without --demo for live market data.</div>{% endif %}
+
+<div class="wrap">
+  <div class="grid g4">
+    <div class="card kpi"><div class="l">Gross exposure</div><div class="v">{{ risk["Gross exposure"]|num }}x</div></div>
+    <div class="card kpi"><div class="l">Ex-ante volatility</div><div class="v">{{ risk["Ex-ante vol"]|pct }}</div></div>
+    <div class="card kpi"><div class="l">1-day VaR 95%</div><div class="v">{{ risk["1D VaR 95%"]|pct(2) }}</div></div>
+    <div class="card kpi"><div class="l">Strategy drawdown</div><div class="v">{{ risk["Current drawdown"]|pct }}</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card note">
+      <h2>Morning note <span class="tag">{{ "written by LLM" if run.commentary_source == "LLM" else "rule-based" }}</span></h2>
+      {% for p in paragraphs %}<p>{{ p }}</p>{% endfor %}
+    </div>
+    <div class="card"><h2>Target book</h2><img src="data:image/png;base64,{{ charts.book }}" alt="Target weights"></div>
+  </div>
+
+  <div class="card">
+    <h2>Trade blotter <span class="tag">per USD {{ "{:,.0f}".format(aum) }} notional</span></h2>
+    <div class="scroll"><table>
+      <tr><th>Instrument</th><th>Side</th><th>Current</th><th>Target</th><th>Change</th><th>Trade (USD)</th><th>Action</th></tr>
+      {% for name, r in book.iterrows() %}
+      <tr><td>{{ name }}</td><td>{{ r["Side"] }}</td><td>{{ r["Current weight"]|pct(1, True) }}</td>
+        <td><b>{{ r["Target weight"]|pct(1, True) }}</b></td>
+        <td class="{{ 'pos' if r['Change'] > 0 else 'neg' if r['Change'] < 0 else '' }}">{{ r["Change"]|pct(1, True) }}</td>
+        <td>{{ "{:+,.0f}".format(r["Trade (USD)"]) }}</td><td><span class="pill {{ r['Action'] }}">{{ r["Action"] }}</span></td></tr>
+      {% endfor %}
+    </table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Market snapshot &amp; signals</h2>
+    <div class="scroll"><table>
+      <tr><th>Instrument</th><th>Class</th><th>Last</th><th>1D</th><th>1W</th><th>1M</th><th>YTD</th><th>Vol 1M</th><th>Vol pctile</th><th>Momentum</th><th>Trend</th><th>Mean rev.</th><th>Signal</th></tr>
+      {% for name, r in snapshot.iterrows() %}
+      <tr><td>{{ name }}</td><td>{{ r["Class"] }}</td><td>{{ r["Last"]|num(2) }}</td>
+        {% for k in ["1D","1W","1M","YTD"] %}<td class="{{ 'pos' if r[k] > 0 else 'neg' if r[k] < 0 else '' }}">{{ r[k]|pct(1, True) }}</td>{% endfor %}
+        <td>{{ r["Vol 1M"]|pct }}</td><td>{{ r["Vol pctile"]|pct(0) }}</td>
+        {% for k in ["Momentum","Trend","Mean rev.","Signal"] %}<td class="{{ 'pos' if r[k] > 0 else 'neg' if r[k] < 0 else '' }}">{{ "{:+.2f}".format(r[k]) }}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </table></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Backtest since {{ start }} <span class="tag">net of transaction costs, no look-ahead</span></h2>
+    <img src="data:image/png;base64,{{ charts.equity }}" alt="Equity curve">
+    <img src="data:image/png;base64,{{ charts.drawdown }}" alt="Drawdown">
+    <div class="metrics" style="margin-top:10px">
+      {% for k, v in metrics %}<div><span>{{ k }}</span><span>{{ v }}</span></div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Exposure</h2>
+    <img src="data:image/png;base64,{{ charts.exposure }}" alt="Exposure">
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Control log</h2>
+    <div class="scroll"><table>
+      <tr><th>Step</th><th>Status</th><th style="text-align:left">Detail</th></tr>
+      {% for s in run.audit %}<tr><td>{{ s.name }}</td><td><span class="pill {{ s.status }}">{{ s.status }}</span></td><td style="text-align:left; white-space:normal">{{ s.detail }}</td></tr>{% endfor %}
+    </table></div>
+  </div>
+</div>
+<footer>Built by Santiago Villegas · Research and education only, not investment advice.</footer>
+</body>
+</html>
